@@ -1,6 +1,83 @@
+// Hardware Pin Definitions (Nano 33 BLE Sense Rev2)
+// Reserved: A4 & A5 for I2C bus
+const int ANALOG_PINS[5]  = {A0, A1, A2, A3, A6};
+const int DIGITAL_PINS[2] = {2, 3};
+
+// Structure to hold normalized sensor readings
+struct SensorFrame {
+    float analogNormalized[5];
+    bool digitalState[2];
+};
 
 void setup() {
+    Serial.begin(115200);
+
+    // Wait for Serial monitor connection (optional, useful for debugging)
+    while (!Serial && millis() < 4000);
+
+    // Pin Configuration
+    for (int i = 0; i < 5; i++) {
+        pinMode(ANALOG_PINS[i], INPUT);
+    }
+    for (int i = 0; i < 2; i++) {
+        pinMode(DIGITAL_PINS[i], INPUT_PULLUP);
+    }
+
+    Serial.println("ASL Glove Initialized.");
+    Serial.println("--------------------------------");
 }
 
 void loop() {
+    SensorFrame frame;
+    readSensors(frame);
+
+    // Stub classifier (replace with TFLite model inference later)
+    char predictedLetter = stubInferenceEngine(frame);
+
+    // Print raw normalized inputs and predicted letter to Serial Monitor
+    printFrameAndPrediction(frame, predictedLetter);
+
+    delay(200); // 5 Hz update rate
+}
+
+// Read physical inputs and normalize values
+void readSensors(SensorFrame &frame) {
+    for (int i = 0; i < 5; i++) {
+        // 10-bit ADC read (0 - 1023) scaled to 0.0 - 1.0 range
+        frame.analogNormalized[i] = analogRead(ANALOG_PINS[i]) / 1023.0f;
+    }
+    for (int i = 0; i < 2; i++) {
+        // Active LOW contacts pulled to GND when pressed
+        frame.digitalState[i] = (digitalRead(DIGITAL_PINS[i]) == LOW);
+    }
+}
+
+// Placeholder function to simulate classification before TFLite model is added
+char stubInferenceEngine(const SensorFrame &frame) {
+    // Simple heuristic placeholder
+    if (frame.digitalState[0] && frame.digitalState[1]) {
+        return 'A';
+    } else if (frame.analogNormalized[0] > 0.7f) {
+        return 'B';
+    } else if (frame.analogNormalized[1] > 0.7f) {
+        return 'C';
+    }
+    return 'D';
+}
+
+// Format output for Serial Monitor inspection
+void printFrameAndPrediction(const SensorFrame &frame, char letter) {
+    Serial.print("Analog: ");
+    for (int i = 0; i < 5; i++) {
+        Serial.print(frame.analogNormalized[i], 2);
+        Serial.print(" ");
+    }
+
+    Serial.print("| Digital: ");
+    Serial.print(frame.digitalState[0]);
+    Serial.print(" ");
+    Serial.print(frame.digitalState[1]);
+
+    Serial.print(" --> Letter: ");
+    Serial.println(letter);
 }
