@@ -7,6 +7,7 @@ const int DIGITAL_PINS[2] = {2, 3};
 struct SensorFrame {
     float analogNormalized[5];
     bool digitalState[2];
+    float gyroNormalized[3]; // X, Y, Z angular velocity [-1.0, 1.0]
 };
 
 void setup() {
@@ -21,6 +22,12 @@ void setup() {
     }
     for (int i = 0; i < 2; i++) {
         pinMode(DIGITAL_PINS[i], INPUT_PULLUP);
+    }
+
+    // Initialize Rev2 IMU
+    if (!IMU.begin()) {
+        Serial.println("Error: Failed to initialize BMI270 IMU!");
+        while (1);
     }
 
     Serial.println("ASL Glove Initialized.");
@@ -49,6 +56,15 @@ void readSensors(SensorFrame &frame) {
     for (int i = 0; i < 2; i++) {
         // Active LOW contacts pulled to GND when pressed
         frame.digitalState[i] = (digitalRead(DIGITAL_PINS[i]) == LOW);
+    }
+
+    // Read Gyroscope (+/- 2000 deg/s scaled to [-1.0, 1.0])
+    if (IMU.gyroscopeAvailable()) {
+        float gx, gy, gz;
+        IMU.readGyroscope(gx, gy, gz);
+        frame.gyroNormalized[0] = gx / 2000.0f;
+        frame.gyroNormalized[1] = gy / 2000.0f;
+        frame.gyroNormalized[2] = gz / 2000.0f;
     }
 }
 
@@ -80,4 +96,11 @@ void printFrameAndPrediction(const SensorFrame &frame, char letter) {
 
     Serial.print(" --> Letter: ");
     Serial.println(letter);
+
+    Serial.print(" | Gyro(X,Y,Z): ");
+    Serial.print(frame.gyroNormalized[0], 2);
+    Serial.print(" ");
+    Serial.print(frame.gyroNormalized[1], 2);
+    Serial.print(" ");
+    Serial.print(frame.gyroNormalized[2], 2);
 }
