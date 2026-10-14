@@ -1,14 +1,17 @@
 #include <Arduino_BMI270_BMM150.h>
 
+#define ANALOG_INPUT_NUM 5
+#define DIGITAL_INPUT_NUM 4
+
 // Hardware Pin Definitions (Nano 33 BLE Sense Rev2)
 // Reserved: A4 & A5 for I2C bus
 const int ANALOG_PINS[5]  = {A0, A1, A2, A3, A6};
-const int DIGITAL_PINS[2] = {2, 3};
+const int DIGITAL_PINS[4] = {2, 3, 4, 5};
 
 // Structure to hold normalized sensor readings
 struct SensorFrame {
     float analogNormalized[5];
-    bool digitalState[2];
+    bool digitalState[4];
     float gyroNormalized[3]; // X, Y, Z angular velocity [-1.0, 1.0]
 };
 
@@ -22,7 +25,7 @@ void setup() {
     for (int i = 0; i < 5; i++) {
         pinMode(ANALOG_PINS[i], INPUT);
     }
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 4; i++) {
         pinMode(DIGITAL_PINS[i], INPUT_PULLUP);
     }
 
@@ -51,11 +54,11 @@ void loop() {
 
 // Read physical inputs and normalize values
 void readSensors(SensorFrame &frame) {
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < ANALOG_INPUT_NUM; i++) {
         // 10-bit ADC read (0 - 1023) scaled to 0.0 - 1.0 range
         frame.analogNormalized[i] = analogRead(ANALOG_PINS[i]) / 1023.0f;
     }
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < DIGITAL_INPUT_NUM; i++) {
         // Active LOW contacts pulled to GND when pressed
         frame.digitalState[i] = (digitalRead(DIGITAL_PINS[i]) == LOW);
     }
@@ -86,15 +89,16 @@ char stubInferenceEngine(const SensorFrame &frame) {
 // Format output for Serial Monitor inspection
 void printFrameAndPrediction(const SensorFrame &frame, char letter) {
     Serial.print("Analog: ");
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < ANALOG_INPUT_NUM; i++) {
         Serial.print(frame.analogNormalized[i], 2);
         Serial.print(" ");
     }
 
     Serial.print("| Digital: ");
-    Serial.print(frame.digitalState[0]);
-    Serial.print(" ");
-    Serial.print(frame.digitalState[1]);
+    for (int i = 0; i < DIGITAL_INPUT_NUM; i++) {
+        Serial.print(frame.digitalState[i]);
+        Serial.print(" ");
+    }
 
     Serial.print(" | Gyro(X,Y,Z): ");
     Serial.print(frame.gyroNormalized[0], 2);
