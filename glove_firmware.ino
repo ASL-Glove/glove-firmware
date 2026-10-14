@@ -1,3 +1,5 @@
+#include <Arduino_BMI270_BMM150.h>
+
 // Hardware Pin Definitions (Nano 33 BLE Sense Rev2)
 // Reserved: A4 & A5 for I2C bus
 const int ANALOG_PINS[5]  = {A0, A1, A2, A3, A6};
@@ -94,13 +96,13 @@ void printFrameAndPrediction(const SensorFrame &frame, char letter) {
     Serial.print(" ");
     Serial.print(frame.digitalState[1]);
 
-    Serial.print(" --> Letter: ");
-    Serial.println(letter);
-
     Serial.print(" | Gyro(X,Y,Z): ");
     Serial.print(frame.gyroNormalized[0], 2);
     Serial.print(" ");
     Serial.print(frame.gyroNormalized[1], 2);
     Serial.print(" ");
     Serial.print(frame.gyroNormalized[2], 2);
+
+    Serial.print(" --> Letter: ");
+    Serial.println(letter);
 }
