@@ -48,9 +48,6 @@ void setup() {
     BLE.advertise();
 
     Serial.println("ASL Glove Initialized. Waiting for BLE connection...");
-
-    Serial.println("ASL Glove Initialized.");
-    Serial.println("--------------------------------");
 }
 
 void loop() {
