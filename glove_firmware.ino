@@ -35,6 +35,20 @@ void setup() {
         while (1);
     }
 
+    // --- BLE Init ---
+    if (!BLE.begin()) {
+        Serial.println("Error: Failed to initialize BLE!");
+        while (1);
+    }
+    BLE.setLocalName("ASL Glove");
+    BLE.setAdvertisedService(aslService);
+    aslService.addCharacteristic(letterChar);
+    BLE.addService(aslService);
+    letterChar.writeValue(0);  // initial value
+    BLE.advertise();
+
+    Serial.println("ASL Glove Initialized. Waiting for BLE connection...");
+
     Serial.println("ASL Glove Initialized.");
     Serial.println("--------------------------------");
 }
@@ -45,6 +59,14 @@ void loop() {
 
     // Stub classifier (replace with TFLite model inference later)
     char predictedLetter = stubInferenceEngine(frame);
+
+    // Send over BLE if a central is connected and the letter changed
+    BLEDevice central = BLE.central();
+    if (central && central.connected()) {
+        if (letterChar.value() != (uint8_t)predictedLetter) {
+            letterChar.writeValue((uint8_t)predictedLetter);
+        }
+    }
 
     // Print raw normalized inputs and predicted letter to Serial Monitor
     printFrameAndPrediction(frame, predictedLetter);
