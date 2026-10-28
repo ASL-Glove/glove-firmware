@@ -1,7 +1,12 @@
 #include <Arduino_BMI270_BMM150.h>
+#include <ArduinoBLE.h>
 
 #define ANALOG_INPUT_NUM 5
 #define DIGITAL_INPUT_NUM 4
+
+// BLE Service & Characteristic (predicted letter as a single ASCII byte)
+BLEService aslService("ef58b65f-1036-475c-bac9-22f0fd9f4040");
+BLEByteCharacteristic letterChar("3acbe7e6-3476-4563-8b69-8751d8c8552f", BLERead | BLENotify);
 
 // Hardware Pin Definitions (Nano 33 BLE Sense Rev2)
 // Reserved: A4 & A5 for I2C bus
