@@ -2,7 +2,7 @@
 #include <ArduinoBLE.h>
 
 #define ANALOG_INPUT_NUM 5
-#define DIGITAL_INPUT_NUM 4
+#define DIGITAL_INPUT_NUM 5
 
 // BLE Service & Characteristic (predicted letter as a single ASCII byte)
 BLEService aslService("ef58b65f-1036-475c-bac9-22f0fd9f4040");
@@ -11,12 +11,12 @@ BLEByteCharacteristic letterChar("3acbe7e6-3476-4563-8b69-8751d8c8552f", BLERead
 // Hardware Pin Definitions (Nano 33 BLE Sense Rev2)
 // Reserved: A4 & A5 for I2C bus
 const int ANALOG_PINS[5]  = {A0, A1, A2, A3, A6};
-const int DIGITAL_PINS[4] = {2, 3, 4, 5};
+const int DIGITAL_PINS[5] = {2, 3, 4, 5, 6};
 
 // Structure to hold normalized sensor readings
 struct SensorFrame {
     float analogNormalized[5];
-    bool digitalState[4];
+    bool digitalState[5];
     float gyroNormalized[3]; // X, Y, Z angular velocity [-1.0, 1.0]
 };
 
@@ -30,7 +30,7 @@ void setup() {
     for (int i = 0; i < 5; i++) {
         pinMode(ANALOG_PINS[i], INPUT);
     }
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 5; i++) {
         pinMode(DIGITAL_PINS[i], INPUT_PULLUP);
     }
 
@@ -82,7 +82,7 @@ void readSensors(SensorFrame &frame) {
         // 10-bit ADC read (0 - 1023) scaled to 0.0 - 1.0 range
         frame.analogNormalized[i] = analogRead(ANALOG_PINS[i]) / 1023.0f;
     }
-    for (int i = 0; i < DIGITAL_INPUT_NUM; i++) {
+    for (int i = 0; i < 5; i++) {
         // Active LOW contacts pulled to GND when pressed
         frame.digitalState[i] = (digitalRead(DIGITAL_PINS[i]) == LOW);
     }
@@ -119,7 +119,7 @@ void printFrameAndPrediction(const SensorFrame &frame, char letter) {
     }
 
     Serial.print("| Digital: ");
-    for (int i = 0; i < DIGITAL_INPUT_NUM; i++) {
+    for (int i = 0; i < 5; i++) {
         Serial.print(frame.digitalState[i]);
         Serial.print(" ");
     }
