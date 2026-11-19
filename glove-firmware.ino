@@ -4,6 +4,14 @@
 #define ANALOG_INPUT_NUM 5
 #define DIGITAL_INPUT_NUM 5
 
+// ---- Data collection mode (for ML training) ----
+// 0 = normal glove behaviour (stub classifier + BLE + human-readable Serial at 5 Hz)
+// 1 = stream raw sensor CSV over Serial at a fixed 50 Hz for asl-ml/collect.py
+//     Columns: t_ms,a0,a1,a2,a3,a6,d2,d3,d4,d5,d6,ax,ay,az,gx,gy,gz
+//     (must match asl-ml/config.yaml; lines starting with '#' are ignored by collect.py)
+#define DATA_COLLECTION_MODE 0
+#define COLLECT_RATE_HZ 50
+
 // BLE Service & Characteristic (predicted letter as a single ASCII byte)
 BLEService aslService("ef58b65f-1036-475c-bac9-22f0fd9f4040");
 BLEByteCharacteristic letterChar("3acbe7e6-3476-4563-8b69-8751d8c8552f", BLERead | BLENotify);
@@ -53,9 +61,19 @@ void setup() {
     BLE.advertise();
 
     Serial.println("ASL Glove Initialized. Waiting for BLE connection...");
+
+#if DATA_COLLECTION_MODE
+    analogReadResolution(12);  // raw 0..4095 for training data
+    Serial.println("# DATA_COLLECTION_MODE: t_ms,a0,a1,a2,a3,a6,d2,d3,d4,d5,d6,ax,ay,az,gx,gy,gz");
+#endif
 }
 
 void loop() {
+#if DATA_COLLECTION_MODE
+    dataCollectionLoop();
+    return;
+#endif
+
     SensorFrame frame;
     readSensors(frame);
 
@@ -133,4 +151,35 @@ void printFrameAndPrediction(const SensorFrame &frame, char letter) {
 
     Serial.print(" --> Letter: ");
     Serial.println(letter);
+}
+
+// ---- Data collection: raw CSV at a fixed rate ----
+// Uses micros() scheduling instead of delay() so samples are evenly spaced.
+// Keeps the last IMU reading if a new one isn't ready yet (never sends garbage).
+void dataCollectionLoop() {
+    static const unsigned long PERIOD_US = 1000000UL / COLLECT_RATE_HZ;
+    static unsigned long nextSampleUs = micros();
+    static float ax = 0, ay = 0, az = 0, gx = 0, gy = 0, gz = 0;
+
+    if ((long)(micros() - nextSampleUs) < 0) return;  // not time yet
+    nextSampleUs += PERIOD_US;
+    // If we fell far behind (e.g. Serial blocked), resync instead of bursting.
+    if ((long)(micros() - nextSampleUs) > (long)PERIOD_US) nextSampleUs = micros() + PERIOD_US;
+
+    if (IMU.accelerationAvailable()) IMU.readAcceleration(ax, ay, az);
+    if (IMU.gyroscopeAvailable())    IMU.readGyroscope(gx, gy, gz);
+
+    Serial.print(millis());
+    for (int i = 0; i < ANALOG_INPUT_NUM; i++) {
+        Serial.print(','); Serial.print(analogRead(ANALOG_PINS[i]));
+    }
+    for (int i = 0; i < DIGITAL_INPUT_NUM; i++) {
+        Serial.print(','); Serial.print(digitalRead(DIGITAL_PINS[i]) == LOW ? 1 : 0);
+    }
+    Serial.print(','); Serial.print(ax, 3);
+    Serial.print(','); Serial.print(ay, 3);
+    Serial.print(','); Serial.print(az, 3);
+    Serial.print(','); Serial.print(gx, 2);
+    Serial.print(','); Serial.print(gy, 2);
+    Serial.print(','); Serial.println(gz, 2);
 }
